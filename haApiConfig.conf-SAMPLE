@@ -1,0 +1,3 @@
+[Server]
+Address = http://IP_ADDRESS:PORT
+ApiKey = APIKEY
