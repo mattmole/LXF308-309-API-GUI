@@ -156,11 +156,10 @@ if __name__ == '__main__':
             entityObjects.append(HaEntityStatus(uri, apiKey, entity_id=entitiesJson[int(a)]['entity_id']))
         except:
             print("Please try again")
-    print(entityList)
 
     # Now, each time the loop runs, iterate through our list of entity IDs and HaEntityStatus items and return an updated number. Finally, sleep for ten seconds before repeating
     while 1:
-    #    # Now print the entries
+        # Now print the entries
         for entityObject in entityObjects:
             response = entityObject.readEntity()
             print(response["responseCode"], response["responseJson"]["attributes"]["friendly_name"], response["responseJson"]["state"])

@@ -16,6 +16,7 @@ defaultFont = QFont('Arial', 14)
 
 #Create some custom classes that set default font details accordingly
 
+# Message box custom class
 class CustomQMessageBox(QMessageBox):
     def __init__(self, title, text, font=defaultFont):
         super().__init__()
@@ -24,26 +25,31 @@ class CustomQMessageBox(QMessageBox):
         self.setText(text)
         self.exec()
 
+# Text box custom class
 class CustomQLineEdit(QLineEdit):
     def __init__(self, text, font = defaultFont):
         super().__init__(text)
         self.setFont(font)
 
+# Label custom class
 class CustomQLabel(QLabel):
     def __init__(self, text, font = defaultFont):
         super().__init__(text)
         self.setFont(font)
 
+# Push button custom class
 class CustomQPushButton(QPushButton):
     def __init__(self, text, font = defaultFont):
         super().__init__(text)
         self.setFont(font)
 
+# Table widget custom class
 class CustomQTableWidget(QTableWidget):
     def __init__(self, font = defaultFont):
         super().__init__()
         self.setFont(font)
 
+# Menu custom class
 class CustomQMenu(QMenu):
     def __init__(self, text, font=defaultFont):
         super().__init__()
@@ -59,17 +65,18 @@ class MainWindow(QMainWindow):
         self.setMinimumWidth(windowWidth)
         self.setMinimumHeight(windowHeight)
 
+        # Instance variables to store useful information
         self.entityIdDict = {}
         self.trendValDict = {}
         self.plotList = []
 
-        #Set a 5 second timer
+        # Set a 5 second timer
         self.checkThreadTimer = QTimer(self)
         self.checkThreadTimer.setInterval(5000) #5 seconds
-
         self.checkThreadTimer.timeout.connect(self.updateTableValues)
         self.checkThreadTimer.start()
 
+        # Set the menu bar up 
         menuBar = self.menuBar()
         menuBar.setFont(font)
         configureMenu = menuBar.addMenu("&Configure")
@@ -85,6 +92,7 @@ class MainWindow(QMainWindow):
         windowLabel = CustomQLabel("Selected Entities and Values")
         self.entityTable = CustomQTableWidget()
 
+        # Set the table up on the table on the main window
         numColumns = 4
         self.entityTable.setColumnCount(numColumns)
         header = self.entityTable.horizontalHeader()
@@ -92,37 +100,49 @@ class MainWindow(QMainWindow):
             header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
         header.resizeSection(3,200)
         self.entityTable.setHorizontalHeaderLabels(["EntityId", "Value", "Trend", "Trend Line"])
+        
+        # Add items to a layout that can be displayed
         verticalLayout = QVBoxLayout()
         verticalLayout.addWidget(menuBar)
         verticalLayout.addWidget(windowLabel)
         verticalLayout.addWidget(self.entityTable)
  
+        # Set this layout as the main contents of the window
         widget = QWidget()
         widget.setLayout(verticalLayout)
         self.setCentralWidget(widget)
 
+    # Function to run when the close button is pressed on the main window
     def closeEvent(self, event):
         if configWindow.isVisible():
             configWindow.close()
         if entityWindow.isVisible():
             entityWindow.close()
 
+    # Show the config window when the function is called
     def showConfigWindow(self):
         configWindow.show()
 
+    # Show the entity type selection window when the function is called
     def showSelectEntitiesWindow(self):
         entityWindow.show()
 
+    # Update the contents of the table when the function is called
     def updateTableValues(self):
 
+        # List of entity types that can be plotted
         domainPlotTypes = ["input_number", "input_text", "number", "sensor"]
 
+        # For any previously drawn plots, close them as they are created new each time the table is updated
         for figure in self.plotList:
             plot.close(figure)
 
+        # If entities have been selected, update the table
         if len(self.entityIdDict) > 0:
+            # Set the number of rows in the table
             self.entityTable.setRowCount(len(self.entityIdDict))
             counter = 0
+            # For each entity, pull the latest value and use it
             for entityId in self.entityIdDict:
                 entityObj = self.entityIdDict[entityId]
                 entityObj["oldValue"] = entityObj["rowValue"]
@@ -133,7 +153,8 @@ class MainWindow(QMainWindow):
                     messageBox = CustomQMessageBox("Connection Error", f"Connection Error: {entityValue['responseCode']}. Check API details and try again.")
                     print(entityValue["responseCode"])
                 
-
+                # Work out the integer value (all are returned as strings from the API)
+                # Set the trend value if possible and this can be displayed
                 if entityId.split(".")[0] in domainPlotTypes:
                     trend = None
                     trendVal=""
@@ -152,13 +173,15 @@ class MainWindow(QMainWindow):
                         trendVal = "NaN"
                     entityObj["trend"] = trend
 
+                    # If no trend values are available for an entity, create a new list within the dict
                     if trendVal != "" and entityId not in self.trendValDict:
                         self.trendValDict[entityId] = []
                     
+                    # Append to the list if the calculated value is not a blank string
                     if trendVal != "":
                         self.trendValDict[entityId].append(trendVal)
 
-
+                    # Create a plot based on the previously returned data
                     figure = plot.figure()
                     canvas = FigureCanvasQTAgg(figure)
                     axes = figure.add_subplot(111)
@@ -168,6 +191,7 @@ class MainWindow(QMainWindow):
                     
                     self.plotList.append(figure)
 
+                # Update the table accordingly
                 self.entityTable.setItem(counter, 0, QTableWidgetItem(entityId))
                 try:
                     self.entityTable.setItem(counter, 1, QTableWidgetItem(f"{float(entityObj['rowValue']):.2f}"))
@@ -187,6 +211,7 @@ class MainWindow(QMainWindow):
 class EntityWindow(QMainWindow):
     def __init__(self, mainWindow, windowWidth = 600):
         super().__init__()
+
         #Set the window's title
         self.setWindowTitle("Select Entities to be tracked")
         self.setMinimumWidth(windowWidth)
@@ -197,19 +222,22 @@ class EntityWindow(QMainWindow):
 
         self.mainWindow = mainWindow
 
+        # Create our layout to store the widgets
         verticalLayout = QVBoxLayout()
         verticalLayout.addWidget(self.numEntitiesLabel)
         verticalLayout.addWidget(self.entitiesTable)
 
+        # Set the windows content
         widget = QWidget()
         widget.setLayout(verticalLayout)
         self.setCentralWidget(widget)
 
+        # Link widgets to function calls
         self.entitiesTable.itemClicked.connect(self.selectEntities)
         self.entitiesTable.itemClicked.connect(self.mainWindow.updateTableValues)
         self.removeCounter = 0
 
-
+    # Function to return the entity IDs that are selected from the table and update the entityIdDict accoridngly with objects that allow the value to be called simply
     def selectEntities(self):
         localEntityIdList = []
         self.removeCounter += 1
@@ -234,7 +262,8 @@ class EntityWindow(QMainWindow):
                             errorBox = CustomQMessageBox("Connection Error",f"Could not connect. Connection error: {readEntityIdValue['responseCode']}. Check the API details and try again.")
                     except (requests.exceptions.InvalidURL, requests.exceptions.ConnectionError):
                         errorBox = CustomQMessageBox("Connection Error","Invalid URL. Please check the details.")
-
+                
+                # Append the entityId if it is not already in the list
                 if entityId not in localEntityIdList:
                     localEntityIdList.append(entityId)
 
@@ -285,10 +314,11 @@ class ConfigWindow(QMainWindow):
 
         connectApiButton = CustomQPushButton("Connect To Home Assistant")
 
-        #Create the widgets to display the list of entity types
+        # Create the widgets to display the list of entity types
         entityTypeLabel = CustomQLabel("Select the type of entities to select from:")
         self.entityTypeTable = CustomQTableWidget()
 
+        # Add widgets to a layout
         verticalLayout = QVBoxLayout()
 
         verticalLayout.addWidget(haServerDetailsLabel)
@@ -299,6 +329,7 @@ class ConfigWindow(QMainWindow):
         verticalLayout.addWidget(entityTypeLabel)
         verticalLayout.addWidget(self.entityTypeTable)
 
+        # Display the widgets on the window
         widget = QWidget()
         widget.setLayout(verticalLayout)
         self.setCentralWidget(widget)
@@ -355,7 +386,7 @@ class ConfigWindow(QMainWindow):
         except (requests.exceptions.InvalidURL, requests.exceptions.ConnectionError):
             errorBox = CustomQMessageBox("Connection Error","Invalid URL. Please check the details.")
         
-
+    # Function to return the entity types that have been selected in the config window and add to a set
     def selectEntityTypes(self):
         entityWindow.show()
 
@@ -408,10 +439,12 @@ if __name__ == "__main__":
     else:
         print("Config file does not exist or is incorrectly formatted! You will be asked to enter details next...")
 
+    # Create a new application and windows
     app = QApplication(sys.argv)
     mainWindow = MainWindow()
     entityWindow = EntityWindow(mainWindow = mainWindow)    
     configWindow = ConfigWindow(entityWindow = entityWindow, uri = uri, apiKey = apiKey)
 
+    # Open the main window when the program runs and execute the app
     mainWindow.show()
     app.exec()
