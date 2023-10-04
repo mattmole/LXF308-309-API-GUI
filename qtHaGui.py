@@ -235,12 +235,10 @@ class EntityWindow(QMainWindow):
         # Link widgets to function calls
         self.entitiesTable.itemClicked.connect(self.selectEntities)
         self.entitiesTable.itemClicked.connect(self.mainWindow.updateTableValues)
-        self.removeCounter = 0
 
     # Function to return the entity IDs that are selected from the table and update the entityIdDict accoridngly with objects that allow the value to be called simply
     def selectEntities(self):
         localEntityIdList = []
-        self.removeCounter += 1
         selectedCells = self.entitiesTable.selectedRanges()
 
         for selectedCell in selectedCells:
